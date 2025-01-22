@@ -16,5 +16,5 @@ supported_currencies:
 # Default currency and localization options
 default_currency: "USD"
 localization:
-  date_format: "MM/DD/YYYY"
+  date_format: "YYYY/MM/DD"
   time_format: "HH:mm:ss"
