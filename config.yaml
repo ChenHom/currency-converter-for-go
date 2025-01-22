@@ -1,0 +1,20 @@
+# Configuration settings for the currency conversion program
+
+# Supported currency codes and their symbols
+supported_currencies:
+  USD: "$"
+  EUR: "€"
+  GBP: "£"
+  JPY: "¥"
+  AUD: "A$"
+  CAD: "C$"
+  CHF: "CHF"
+  CNY: "¥"
+  SEK: "kr"
+  NZD: "NZ$"
+
+# Default currency and localization options
+default_currency: "USD"
+localization:
+  date_format: "MM/DD/YYYY"
+  time_format: "HH:mm:ss"
