@@ -1,156 +1,62 @@
 package main
 
 import (
-	"encoding/json"
+	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
-	"sync"
-	"time"
+
+	"currency-converter/currency"
+
+	"github.com/joho/godotenv"
 )
-
-type ExchangeRate struct {
-	Rates map[string]float64 `json:"rates"`
-	Base  string             `json:"base"`
-	Date  string             `json:"date"`
-}
-
-var (
-	cache          = make(map[string]float64)
-	cacheMutex     sync.Mutex
-	cacheTimestamp time.Time
-	rateLimit      = 10
-	rateLimitMutex sync.Mutex
-	requestCount   = 0
-)
-
-// fetchExchangeRates fetches exchange rates from a third-party API using HTTP and JSON
-func fetchExchangeRates(apiURL string) (*ExchangeRate, error) {
-	resp, err := http.Get(apiURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch exchange rates: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
-	}
-
-	var exchangeRate ExchangeRate
-	if err := json.Unmarshal(body, &exchangeRate); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
-	}
-
-	return &exchangeRate, nil
-}
-
-// convertCurrency converts an amount from one currency to another using the fetched exchange rates
-func convertCurrency(amount float64, from, to string, rates map[string]float64) (float64, error) {
-	fromRate, ok := rates[from]
-	if !ok {
-		return 0, fmt.Errorf("unsupported currency: %s", from)
-	}
-
-	toRate, ok := rates[to]
-	if !ok {
-		return 0, fmt.Errorf("unsupported currency: %s", to)
-	}
-
-	return amount * (toRate / fromRate), nil
-}
-
-// getCachedRates returns the cached exchange rates if they are still valid
-func getCachedRates() map[string]float64 {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-
-	if time.Since(cacheTimestamp) < 15*time.Minute {
-		return cache
-	}
-
-	return nil
-}
-
-// updateCache updates the local cache with the latest exchange rates
-func updateCache(rates map[string]float64) {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-
-	cache = rates
-	cacheTimestamp = time.Now()
-}
-
-// rateLimitExceeded checks if the rate limit for API requests has been exceeded
-func rateLimitExceeded() bool {
-	rateLimitMutex.Lock()
-	defer rateLimitMutex.Unlock()
-
-	if requestCount >= rateLimit {
-		return true
-	}
-
-	requestCount++
-	return false
-}
-
-// resetRateLimit resets the rate limit counter every minute
-func resetRateLimit() {
-	for {
-		time.Sleep(1 * time.Minute)
-		rateLimitMutex.Lock()
-		requestCount = 0
-		rateLimitMutex.Unlock()
-	}
-}
 
 func main() {
-	go resetRateLimit()
+	go currency.ResetRateLimit()
+
+	// 載入 .env 文件
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("載入 .env 文件時出錯")
+	}
 
 	apiKey := os.Getenv("API_KEY")
 	baseURL := os.Getenv("BASE_URL")
 	if apiKey == "" || baseURL == "" {
-		log.Fatal("API_KEY and BASE_URL must be set")
+		log.Fatal("必須設置 API_KEY 和 BASE_URL")
 	}
 
-	apiURL := fmt.Sprintf("%s/latest?access_key=%s", baseURL, apiKey)
+	apiURL := baseURL
 
-	var exchangeRate *ExchangeRate
-	var err error
+	// 從命令行獲取輸入的金額和幣種
+	amount := flag.Float64("amount", 0, "要轉換的金額")
+	from := flag.String("from", "", "要轉換的貨幣")
+	to := flag.String("to", "USD", "目標貨幣")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "使用方法 :\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  -amount float\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "        要轉換的金額 (必填)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  -from string\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "        要轉換的貨幣 (必填)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  -to string\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "        目標貨幣 (預設：USD)\n")
+	}
+	flag.Parse()
 
-	for i := 0; i < 3; i++ {
-		if rateLimitExceeded() {
-			log.Println("Rate limit exceeded, using cached rates")
-			exchangeRate = &ExchangeRate{Rates: getCachedRates()}
-			break
-		}
-
-		exchangeRate, err = fetchExchangeRates(apiURL)
-		if err == nil {
-			updateCache(exchangeRate.Rates)
-			break
-		}
-
-		time.Sleep(time.Duration(i*i) * time.Second)
+	if *amount == 0 || *from == "" || *to == "" {
+		flag.Usage()
+		log.Println("所有參數 -amount, -from 都是必填的。")
+		return
 	}
 
-	if err != nil {
-		log.Fatalf("Error fetching exchange rates: %v", err)
+	exchangeRate, fetchErr := currency.GetExchangeRate(apiURL)
+	if fetchErr != nil {
+		log.Fatalf("獲取匯率時出錯: %v", fetchErr)
 	}
 
-	amount := 100.0
-	from := "USD"
-	to := "EUR"
-	convertedAmount, err := convertCurrency(amount, from, to, exchangeRate.Rates)
-	if err != nil {
-		log.Fatalf("Error converting currency: %v", err)
+	convertedAmount, convErr := currency.ConvertCurrency(*amount, *from, *to, exchangeRate.ConversionRates)
+	if convErr != nil {
+		log.Fatalf("轉換貨幣時出錯: %v", convErr)
 	}
 
-	fmt.Printf("%.2f %s is %.2f %s\n", amount, from, convertedAmount, to)
+	fmt.Printf("%.2f %s 等於 %.2f %s\n", *amount, *from, convertedAmount, *to)
 }

@@ -12,6 +12,7 @@ supported_currencies:
   CNY: "¥"
   SEK: "kr"
   NZD: "NZ$"
+  TWD: "NT$"
 
 # Default currency and localization options
 default_currency: "USD"

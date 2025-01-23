@@ -5,33 +5,35 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"currency-converter/currency"
 )
 
 func TestFetchExchangeRates(t *testing.T) {
-	// Create a test server to mock the API response
+	// 建立一個測試伺服器來模擬 API 回應
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"rates":{"USD":1.0,"EUR":0.85},"base":"USD","date":"2021-01-01"}`))
+		w.Write([]byte(`{"conversion_rates":{"USD":1.0,"EUR":0.85},"base_code":"USD"}`))
 	}))
 	defer ts.Close()
 
-	// Set the environment variables for the test
+	// 設置測試的環境變數
 	os.Setenv("API_KEY", "test_api_key")
 	os.Setenv("BASE_URL", ts.URL)
 
-	// Fetch the exchange rates
-	exchangeRate, err := fetchExchangeRates(ts.URL)
+	// 獲取匯率
+	exchangeRate, err := currency.GetExchangeRate(ts.URL)
 	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		t.Fatalf("預期沒有錯誤，得到 %v", err)
 	}
 
-	// Check the exchange rates
-	if exchangeRate.Rates["USD"] != 1.0 {
-		t.Errorf("Expected USD rate to be 1.0, got %v", exchangeRate.Rates["USD"])
+	// 檢查匯率
+	if exchangeRate.ConversionRates["USD"] != 1.0 {
+		t.Errorf("預期 USD 匯率為 1.0，得到 %v", exchangeRate.ConversionRates["USD"])
 	}
-	if exchangeRate.Rates["EUR"] != 0.85 {
-		t.Errorf("Expected EUR rate to be 0.85, got %v", exchangeRate.Rates["EUR"])
+	if exchangeRate.ConversionRates["EUR"] != 0.85 {
+		t.Errorf("預期 EUR 匯率為 0.85，得到 %v", exchangeRate.ConversionRates["EUR"])
 	}
 }
 
@@ -46,47 +48,47 @@ func TestConvertCurrency(t *testing.T) {
 	to := "EUR"
 	expected := 85.0
 
-	convertedAmount, err := convertCurrency(amount, from, to, rates)
+	convertedAmount, err := currency.ConvertCurrency(amount, from, to, rates)
 	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		t.Fatalf("預期沒有錯誤，得到 %v", err)
 	}
 
 	if convertedAmount != expected {
-		t.Errorf("Expected %v, got %v", expected, convertedAmount)
+		t.Errorf("預期 %v，得到 %v", expected, convertedAmount)
 	}
 }
 
 func TestIntegration(t *testing.T) {
-	// Create a test server to mock the API response
+	// 建立一個測試伺服器來模擬 API 回應
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"rates":{"USD":1.0,"EUR":0.85},"base":"USD","date":"2021-01-01"}`))
+		w.Write([]byte(`{"conversion_rates":{"USD":1.0,"EUR":0.85},"base_code":"USD"}`))
 	}))
 	defer ts.Close()
 
-	// Set the environment variables for the test
+	// 設置測試的環境變數
 	os.Setenv("API_KEY", "test_api_key")
 	os.Setenv("BASE_URL", ts.URL)
 
-	// Fetch the exchange rates
-	exchangeRate, err := fetchExchangeRates(ts.URL)
+	// 獲取匯率
+	exchangeRate, err := currency.GetExchangeRate(ts.URL)
 	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		t.Fatalf("預期沒有錯誤，得到 %v", err)
 	}
 
-	// Convert currency
+	// 轉換貨幣
 	amount := 100.0
 	from := "USD"
 	to := "EUR"
 	expected := 85.0
 
-	convertedAmount, err := convertCurrency(amount, from, to, exchangeRate.Rates)
+	convertedAmount, err := currency.ConvertCurrency(amount, from, to, exchangeRate.ConversionRates)
 	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		t.Fatalf("預期沒有錯誤，得到 %v", err)
 	}
 
 	if convertedAmount != expected {
-		t.Errorf("Expected %v, got %v", expected, convertedAmount)
+		t.Errorf("預期 %v，得到 %v", expected, convertedAmount)
 	}
 }
