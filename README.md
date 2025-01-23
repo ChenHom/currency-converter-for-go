@@ -5,23 +5,27 @@ This program allows you to convert amounts between different currencies using re
 ## Installation
 
 1. Clone the repository:
+
    ```sh
    git clone https://github.com/yourusername/currency-conversion.git
    cd currency-conversion
    ```
 
 2. Install dependencies:
+
    ```sh
    go mod tidy
    ```
 
 3. Create a `.env` file with your API key and base URL for the exchange rate provider:
+
    ```sh
    API_KEY=your_api_key_here
    BASE_URL=https://api.exchangerate-api.com/v4/latest
    ```
 
 4. Create a `config.yaml` file with the supported currency codes and their symbols:
+
    ```yaml
    supported_currencies:
      USD: "$"
@@ -34,23 +38,36 @@ This program allows you to convert amounts between different currencies using re
      CNY: "¥"
      SEK: "kr"
      NZD: "NZ$"
-
-   default_currency: "USD"
-   localization:
-     date_format: "MM/DD/YYYY"
-     time_format: "HH:mm:ss"
+     TWD: "NT$"
+     // ...existing code...
    ```
 
 ## Usage
 
 To convert an amount from one currency to another, run the program:
+
 ```sh
 go run main.go
+```
+
+### Command Line Options
+
+You can also use the following command line options:
+
+- `-from`: The currency code to convert from (default: USD)
+- `-to`: The currency code to convert to (required)
+- `-amount`: The amount to convert (required)
+
+Example:
+
+```sh
+go run main.go -from USD -to JPY -amount 100
 ```
 
 ## Supported Currencies
 
 The following currency codes and their symbols are supported:
+
 - USD: $
 - EUR: €
 - GBP: £
@@ -61,18 +78,21 @@ The following currency codes and their symbols are supported:
 - CNY: ¥
 - SEK: kr
 - NZD: NZ$
+- TWD: NT$
 
 ## Configuration
 
 The program uses environment variables and a configuration file for settings:
 
 - `.env` file:
+
   ```sh
   API_KEY=your_api_key_here
   BASE_URL=https://api.exchangerate-api.com/v4/latest
   ```
 
 - `config.yaml` file:
+
   ```yaml
   supported_currencies:
     USD: "$"
@@ -85,18 +105,16 @@ The program uses environment variables and a configuration file for settings:
     CNY: "¥"
     SEK: "kr"
     NZD: "NZ$"
-
-  default_currency: "USD"
-  localization:
-    date_format: "MM/DD/YYYY"
-    time_format: "HH:mm:ss"
+    TWD: "NT$"
+    // ...existing code...
   ```
 
 ## Testing
 
 To run the tests, use the following command:
+
 ```sh
-go test ./...
+go test -v
 ```
 
 ## Deployment
@@ -104,11 +122,13 @@ go test ./...
 To deploy the program, follow these steps:
 
 1. Build the program:
+
    ```sh
    go build -o currency-conversion
    ```
 
 2. Run the executable:
+
    ```sh
    ./currency-conversion
    ```
