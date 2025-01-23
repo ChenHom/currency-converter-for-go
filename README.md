@@ -114,3 +114,17 @@ To deploy the program, follow these steps:
    ```
 
 3. Ensure that the `.env` and `config.yaml` files are properly configured on the deployment environment.
+
+# Currency Converter for Go
+
+這是一個用於貨幣轉換的 Go 應用程序。
+
+## 如何執行測試
+
+要執行測試，請使用以下命令：
+
+```sh
+go test ./...
+```
+
+這將運行所有測試並顯示測試結果。
